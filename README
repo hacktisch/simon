@@ -1,4 +1,3 @@
-<pre>
 ╔════════════════════════════╗  
 ║ ┌─┐ ┬ ┌┬┐ ┌─┐ ┌┐┌    ┬ ┌─┐ ║  
 ║ └─┐ │ │││ │ │ │││    │ └─┐ ║  
@@ -17,5 +16,3 @@ CONFIG
 Overwrite the default configuration by renaming .config.example.json to .config.json
 
 minifier parameters: https://github.com/gkralik/php-uglifyjs
-
-</pre>
