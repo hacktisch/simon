@@ -1,9 +1,0 @@
-{
-    "requires":[
-        "modules/polyfills",
-        "modules/shorthand",
-        "modules/dom",
-        "modules/timeline",
-        "modules/router"
-    ]
-}
