@@ -1,0 +1,6 @@
+{
+    "requires":[
+        "modules/polyfills",
+        "modules/shorthand"
+    ]
+}

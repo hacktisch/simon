@@ -1,0 +1,33 @@
+{
+    "libraries": [],
+    "assets": [
+        "core/object",
+        "core/request",
+        "core/model",
+        "core/templater",
+        "core/populator"
+    ],
+    "config": {
+        "namespace":false,
+        "original_url_path": "/simon/",
+        "compiled_url_path": "/js/",
+        "bust_cache": 0,
+        "file_extension": ".js",
+        "tag": "<script src=\"{{src}}\"></script>",
+        "compile": {
+            "to": "../js",
+            "with": "comp/utc/pc",
+            "minify": false,
+            "minify_encoding": 0,
+            "minify_fastDecode": true,
+            "minify_specialChars": false,
+            "aggregate": false,
+            "aggregate_file": "simon",
+            "transpileES6":false
+        },
+        "js_defs": {
+            "api_url": "http://localhost/",
+            "tpl_url": "http://localhost/"
+        }
+    }
+}

@@ -1,0 +1,17 @@
+{
+    "namespace": "ꟿ",
+    "libraries": [],
+    "modules": ["polyfills", "shorthand", "timeline", "dom", "router", "evenses"],
+    "compile": {
+        "minify": true,
+        "aggregate": true,
+        "to": "../cdn/js",
+        "minify_encoding": 0,
+        "minify_fastDecode": true,
+        "minify_specialChars": false
+    },
+    "js_defs": {
+        "api_url": "http://deploy.evenses.com:8888/",
+        "tpl_url": "/tpl/"
+    }
+}
