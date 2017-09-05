@@ -50,7 +50,7 @@ SIMON.Router = class extends SIMON.Singleton {
         t.getRoutes.then(function () {
             let p = '', a = {};
             window.location.hash.substring(0, 3) == '#!/' && (p = window.location.hash.substring(3));
-            let f = t.alias[p];
+            let f = t.alias ? t.alias[p] : 0;
             if (f) {
                 f = f.split('/');
                 p = f.shift();
