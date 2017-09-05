@@ -40,7 +40,7 @@ SIMON.Templater = class extends SIMON.Object {
                 inlineTpl ? renderFunc(inlineTpl): new SIMON.Request({
                     base: SIMON.s.tpl_url,
                     method: 'GET',
-                    endpoint : tpl + '.twig',
+                    endpoint : tpl + '.tpl',
                 }).send().then(function () {
                     renderFunc(this.response)
                 }, n);
