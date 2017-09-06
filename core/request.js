@@ -7,7 +7,7 @@ SIMON.Request = class extends SIMON.Object {
             method: 'POST' //TODO vaker GET dan POST? omkeren?
         };
     }
-    send() {
+    send(d) {
         var t = this;
         this.pr = new SIMON.Promise(function (y, n) {
             let r = new XMLHttpRequest();
@@ -25,7 +25,7 @@ SIMON.Request = class extends SIMON.Object {
                     }
                 }
             };
-            r.send();
+            r.send(d);
         });
         return this;
     }
