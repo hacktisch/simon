@@ -25,6 +25,9 @@ SIMON.Request = class extends SIMON.Object {
                     }
                 }
             };
+            if(d && !(d instanceof FormData)){
+                d=JSON.stringify(d);
+            }
             r.send(d);
         });
         return this;
