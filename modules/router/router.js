@@ -38,11 +38,6 @@ SIMON.Router = class extends SIMON.Singleton {
             }
         }, false);
 
-        window.onbeforeunload = function (e) {
-            localStorage.setItem("y", getY());
-            localStorage.setItem("url", location.href);
-        };
-
     }
 
     setByUrl() {
