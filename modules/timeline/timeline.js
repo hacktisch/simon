@@ -2,6 +2,7 @@
  * timeline.js
  * Enqueue events in a timeline animation
  * Written by Merijn van Wouden
+ * TODO CLASS
  */
 
 function timeline(queue) {

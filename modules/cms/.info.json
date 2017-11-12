@@ -1,0 +1,6 @@
+{
+    "requires":[
+        "libraries/sortable",
+        "modules/shortcut"
+    ]
+}

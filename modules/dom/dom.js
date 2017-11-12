@@ -6,6 +6,12 @@ Element.prototype.rerender = function (mutate) {
     }
     this.dispatchEvent(new CustomEvent('rerender', p))
 };
+NodeList.prototype.rerender = function (mutate) {
+    for (let i = 0; i < this.length; i++) {
+        Element.prototype.rerender.apply(this[i], [mutate]);
+    }
+    return this;
+};
 
 SIMON.Dom = class {
 
@@ -33,6 +39,7 @@ SIMON.Dom = class {
                             s = document.createElement('SECTION');
                     s.id = c.id;
                     s.className = c.className;
+                    if(a.transition){s.setAttribute("transition",a.transition.value)}
                     c.insertAdjacentElement('afterend', s);
 
                     s.bind('rerender', function (e) {
@@ -57,8 +64,8 @@ SIMON.Dom = class {
 
                     if (r) {
                         //todo compound require (heeft compound promises nodig
-                        populator.load(r).then(function () {
-                            pass[r] = this.response;
+                        populator.load(r).then(function (ret) {
+                            pass[r] = ret;
                             render.apply(s, [pass]);
                         });
                     } else {

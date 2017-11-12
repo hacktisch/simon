@@ -11,13 +11,22 @@ SIMON.Router = class extends SIMON.Singleton {
             className: 'router',
             route: '',
             hash: '#!/',
+            end: "~",
+            sep: ",",
             lang: l
         };
     }
 
     get path() {
         let l = this.hash.length;
-        return location.hash.substring(0, l) == this.hash ? location.hash.substring(l) : "";
+        return location.hash.substring(0, l) == this.hash ? location.hash.substring(l).split(this.end)[0] : "";
+    }
+
+    get params() {
+        let
+                h = location.hash,
+                p = h.indexOf(this.end);
+        return ~p ? (n=>(n.length?n.split(this.sep):[]))(h.substring(p + 1)) : []
     }
 
     constructor(...args) {
@@ -77,8 +86,8 @@ SIMON.Router = class extends SIMON.Singleton {
     }
 
     goto(to) {
-        if (to != window.location.pathname + window.location.hash) {
-            history.pushState({}, "", to);
+        if (to != location.pathname + location.hash) {
+            history.pushState({}, "", location.origin+to);
             this.setByUrl();
         }
         return this;

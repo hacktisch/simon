@@ -13,6 +13,7 @@ function assign(o, d) {
     for (let k in d) {
         o[k] = d[k];
     }
+    return o;
 }
 
 (function () {
@@ -27,6 +28,10 @@ function assign(o, d) {
         },
         rc: function (c) {
             this.classList.remove(c);
+            return this;
+        },
+        tc:function(c,v){
+            v?this.ac(c):this.rc(c);
             return this;
         },
         hc: function (c) {

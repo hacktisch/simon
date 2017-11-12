@@ -2,6 +2,8 @@
     "requires":[
         "modules/polyfills",
         "modules/shorthand",
-        "modules/cookie"
+        "modules/dom",
+        "modules/timeline",
+        "modules/router"
     ]
 }

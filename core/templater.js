@@ -37,13 +37,7 @@ SIMON.Templater = class extends SIMON.Object {
                             ));
                 };
 
-                inlineTpl ? renderFunc(inlineTpl): new SIMON.Request({
-                    base: SIMON.s.tpl_url,
-                    method: 'GET',
-                    endpoint : tpl + '.tpl',
-                }).send().then(function () {
-                    renderFunc(this.response)
-                }, n);
+                inlineTpl ? renderFunc(inlineTpl) : t.fetch(tpl).then(renderFunc, n);
             });
         }
         return this.cache[tpl];

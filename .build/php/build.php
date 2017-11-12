@@ -7,11 +7,11 @@ class simon {
     private $hasCompiled = false;
     private $origNamespace = 'SIMON';
 
-    function __construct($config = []) {
-        $this->dir = dirname(__FILE__) . '/';
-        $this->base = $this->dir . '../../';
+    function __construct($config = [], $base = false, $configfile = false) {
+        $this->dir = dirname(__FILE__) . '/../../';
+        $this->base = $base ? $base : $this->dir;
 
-        $defaults = $this->readConfig('.build/defaults');
+        $defaults = $this->readConfig($this->dir . '.build/defaults');
         if (!count($defaults)) {
             throw new error('Default settings not found');
         }
@@ -19,7 +19,7 @@ class simon {
             $this->$default = $set;
         }
 
-        $a = $this->readConfig('.config');
+        $a = $this->readConfig($this->base . ($configfile ? $configfile : '.config'));
 
         $config = array_replace_recursive($a, $config);
 
@@ -56,10 +56,10 @@ class simon {
 
     private function readConfig($file) {
         $config = [];
-        if (file_exists($this->base . $file . '.json')) {
-            $config = json_decode(file_get_contents($this->base . $file . '.json'), true);
+        if (file_exists($file . '.json')) {
+            $config = json_decode(file_get_contents($file . '.json'), true);
             if (!$config || !is_array($config)) {
-                throw new error($this->base . $file . '.json badly formatted');
+                throw new error($file . '.json badly formatted');
             }
         }
         return $config;
@@ -73,7 +73,7 @@ class simon {
         $code = [];
         foreach ($this->assets as $asset) {
             $f = $asset . $this->config['file_extension'];
-            $file = $this->base . $f;
+            $file = $this->dir . $f;
             if (!file_exists($file)) {
                 throw new Exception('Asset "' . $f . '" does not exist', 2510);
             }

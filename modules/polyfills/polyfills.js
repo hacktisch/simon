@@ -33,7 +33,8 @@ SIMON.Promise = class {
     then(...args) {
         if (this.resolved) {
             if (arguments.length >= this.resolved) {
-                arguments[this.resolved - 1](this.ret);
+                let f=arguments[this.resolved - 1];
+                f && f(this.ret);
             }
         } else {
             for (let i = 0; i < arguments.length; i++) {
@@ -46,7 +47,7 @@ SIMON.Promise = class {
     processq() {
         var q = this.q[this.resolved - 1];
         for (let i in q) {
-            q[i](this.ret);
+            q[i] && q[i](this.ret);
         }
     }
 };

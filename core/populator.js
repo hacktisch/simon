@@ -8,13 +8,4 @@ SIMON.Populator = class extends SIMON.Object {
         };
     }
 
-    load(resource) {
-
-        if (!this.cache[resource]) {
-            this.cache[resource] = new SIMON.Request({
-                endpoint: 'resource/' + resource,
-            }).send();
-        }
-        return this.cache[resource];
-    }
 };
