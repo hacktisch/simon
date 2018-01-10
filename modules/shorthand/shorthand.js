@@ -15,6 +15,13 @@ function assign(o, d) {
     }
     return o;
 }
+function keep(o,keep){
+    let r={};
+    for(let k in o){
+        ~keep.indexOf(k) && (r[k]=o[k]);
+    }
+    return r;
+}
 
 (function () {
     let el = {

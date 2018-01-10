@@ -1,16 +1,44 @@
 (function (gl) {
     gl.base = location.origin + location.pathname;
+    gl.clone = function (obj) {
+        if (!obj || true == obj) {
+            return obj;
+        }
+        var objType = typeof (obj);
+        if ("number" == objType || "string" == objType) {
+            return obj;
+        }
+        var result = Array.isArray(obj) ? [] : !obj.constructor ? {} : new obj.constructor();
+        if (obj instanceof Map) {
+            for (var key of obj.keys()) {
+                result.set(key, clone(obj.get(key)));
+            }
+        }
+        for (var key in obj) {
+            if (obj.hasOwnProperty(key)) {
+                result[key] = clone(obj[ key ]);
+            }
+        }
+        return result;
 
-    gl.clone = function (a) {
-        //TODO MEET EFFICIENTIE
-        return JSON.parse(JSON.stringify(a));
+
+    };
+    gl.pref = (p, v) => {
+        return typeof v == "undefined" ?
+                ~~localStorage.getItem(p) :
+                localStorage.setItem(p, ~~v);
+    };
+    gl.prefString = (p, v) => {
+        return typeof v == "undefined" ?
+                localStorage.getItem(p) :
+                localStorage.setItem(p, v);
     };
     gl.passJson = function (s) {
         return JSON.stringify(s).replace(/"/g, '#');
     };
 
-    gl.flt = {};
-
+    gl.flt = JSON.parse(prefString("flt") || "{}");
+    console.log("flt:", gl.flt);
 
     let
             d = document,
@@ -32,15 +60,36 @@
                 load: function (resource) {
 
                     if (!this.cache[resource]) {
-                        this.cache[resource] = new SIMON.Request({
-                            endpoint: 'resource/' + resource,
-                        }).send();
+                        this.cache[resource] = new SIMON.Promise((y, n) => {
+                            new SIMON.Request({
+                                endpoint: 'resource/' + resource
+                            }).send().then(function () {
+                                let r = this.response.res;
+                                if (!r) {
+                                    n();
+                                }
+                                switch (resource) {
+                                    case "env":
+                                        r.ontology = SIMON.Mapize(r.ontology);
+                                        break;
+                                    case "matrix":
+                                        console.log(r.matrix);
+                                        console.log(r.locator);
+                                        r.matrix = new Matrix(r.matrix);
+                                        break;
+                                }
+                                y(r);
+                            }, n)
+                        });
                     }
                     return this.cache[resource];
                 },
             }),
             dom = new SIMON.Dom(),
             run = {
+                reload: function () {
+                    this.parentNode.rerender();
+                },
                 header: function () {
                     let f = _('fly'), m = _('menu'), mt, move2 = function () {
                         clearTimeout(mt);
@@ -105,8 +154,8 @@
 
                 reviews: function () {
                     let ct = this;
-                    populator.load('reviews').then(function () {
-                        let rvs = this.response, tm, tms = function ($t) {
+                    populator.load('reviews').then(function (rvs) {
+                        let tm, tms = function ($t) {
                             clearTimeout(tm);
                             tm = setTimeout(function () {
                                 if (d.body.contains($t)) {
@@ -168,9 +217,6 @@
                             break;
                         case "vm":
                             h = "//vimeo.com/" + k;
-                            new SIMON.Request(function () {
-
-                            });
                             new SIMON.Request({
                                 base: '//vimeo.com/api/v2/video/' + k + '.json',
                                 method: 'GET'
@@ -179,8 +225,8 @@
                             });
                             break;
                         default:
-                            h = "img/act/" + k + ".jpg";
-                            s = "img/act/" + k + ".jpg";
+                            h = k;
+                            s = h + "/s";
                     }
                     s && t.css({'background-image': 'url(' + s + ')'});
                     t.href = h;
@@ -209,9 +255,41 @@
         }
     };
 
+
+    class Load {
+        run(ep, s) {
+            let
+                    req = new SIMON.Request({
+                        endpoint: ep
+                    }).send(s),
+                    r = new SIMON.Promise(function (y, n) {
+                        req.then(function () {
+                            let res = this.response.res;
+                            if (res && res.e) {
+                                //errorCode(res.e, res.extra);
+                                n();
+                            } else {
+                                y(res);
+                            }
+
+
+                        }, n);
+
+                    });
+            r.abort = () => {
+                req.abort();
+            };
+            return r;
+        }
+    }
+    let load = new Load();
+
+
+
+
     gl.router = new SIMON.Router({
-        getRoutes: populator.load('env').then(function () {
-            let r = this.response.routes, m = new Map();
+        getRoutes: populator.load('env').then(function (rt) {
+            let r = rt.routes, m = new Map();
             for (let i = 0; i < r.length; i++) {
                 let h = {
                     rt: r[i][1],
@@ -224,24 +302,30 @@
                 m.set(r[i][0], h);
             }
             gl.router.routes = m;
-            gl.router.alias = this.response.alias;
+            gl.router.alias = rt.alias;
             gl.router.aliasRev = {};
             for (var k in gl.router.alias) {
                 gl.router.aliasRev[gl.router.alias[k]] = k;
             }
         }),
-        build: function (r, rp) {
+        build: function (r, rp, pm) {
             let a = this.aliasRev[r + '/' + rp.map(function (a) {
                 return a[1];
             }).join('/')];
             if (!a) {
                 a = this.routes.get(r).rt;
-                for (let i = 0; i < rp.length; i++) {
-                    a = a.replace(':' + rp[i][0], rp[i][1]);
+                if (rp) {
+                    for (let i = 0; i < rp.length; i++) {
+                        a = a.replace(':' + rp[i][0], rp[i][1]);
+                    }
                 }
+            }
+            if (pm) {
+                a += this.end + pm.join(this.sep);
             }
             return a;
         }
+
     });
     w.onbeforeunload = function (e) {
         localStorage.setItem("y", getY());
@@ -424,26 +508,6 @@
             if (getY() > mst) {
                 setY(mst);
             }
-
-            switch (p.page) {
-                case "c":
-                    let
-                            id = p.env.category[p.cat].id,
-                            c = $1('#fltm [value="' + id + '"]');
-                    if (c && !c.checked) {
-                        c.checked = true;
-                        c.trigger('change');
-                    }
-                    _('prologue').rerender();
-                    _('breadcrumb').rerender();
-                    _('serp').rerender(function (p) {
-                        p.match = Math.random() * 0.1 + 0.9;
-                        return p;
-                    });
-                    break;
-                default:
-                    a.render.apply(this, [p, 1]);
-            }
         } else {
             setY(0);
             if (t.prevp) {
@@ -454,8 +518,43 @@
                     m.rc('trans');
                 }, 2000);//todo zet juiste timeoutlengte
             }
-            a.render.apply(this, [p, 1]);
         }
+
+        switch (p.page) {
+            case "c":
+                gl.flt = {};
+                for (let pm of router.params) {
+                    (s => s.length == 2 && (gl.flt[s[0]] = s[1]))(pm.split("="))
+                }
+                console.log(gl.flt);
+                prefString("flt", JSON.stringify(gl.flt));
+                let id = p.env.ontology.get("category").$.get(p.cat).id;
+                if (same) {
+                    let c = $1('#fltm [value="' + id + '"]');
+                    if (c && !c.checked) {
+                        c.checked = true;
+                        c.trigger('change');
+                    }
+                    _('prologue').rerender();
+                    _('breadcrumb').rerender();
+                    _('serp').rerender();
+                } else {
+                    a.render.apply(this, [p, 1]);
+                }
+
+                break;
+            case "p":
+                load.run("get", {kind: "product", id: router.args.prod}).then((r) => {
+                    p.product = r;
+                    a.render.apply(this, [p, 1]);
+                });
+                break;
+            default:
+                a.render.apply(this, [p, 1]);
+        }
+
+
+
         this.prevp = p.page;
         d.body.setAttribute('pg', p.page);
     };
@@ -493,12 +592,72 @@
         a.callback.apply(l);
     };
 
+    gl.setFlt = function (e) {
+        let t = e.target;
+        if (t.name.substring(0, 4) != "flt-") {
+            let el = t.form.elements;
+            gl.flt[t.name] = t.value || null;
+            console.log(gl.flt);
+            prefString("flt", JSON.stringify(gl.flt));
+        }
+    };
+
+    gl.serp = function (e) {
+        let t = e.target;
+        if (t.name.substring(0, 4) != "flt-") {
+            let el = t.form.elements, p = [];
+            for (let k of ["occasion", "location", "budget", "rating"]) {
+                if (el[k].value) {
+                    p.push(k + "=" + el[k].value);
+                }
+            }
+            router.goto(router.hash + router.build(router.route, [["cat", el.category.value || router.args.cat]], p));
+        }
+    };
 
     gl.transSerp = function (p, a) {
-        let t = this;
-        t.firstElementChild.ac('o0');
+
+
+        populator.load('matrix').then(m => {
+
+            let arr = new Array(m.width).fill(0);
+            arr[0] = 0;//flt.budget;
+            arr[m.locator[p.cat]] = 1;
+            console.log(arr);
+            let filter = new Vector(arr);
+
+            p.sort = m.matrix.dist(filter).sorted;
+            p.serp = 1;
+
+            this.firstElementChild.ac('o0');
+            new timeline().add(400, () => a.render.apply(this, [p, 1])).run();
+
+
+        });
+
+
+
+
+        /*
+         let t = this, list = load.run("list", {kind: "product", pm: [], filter: {category: [["=", router.args.cat]]}});
+         t.firstElementChild.ac('o0');
+         new timeline().add(400, function () {
+         list.then(function (r) {
+         p.rows = r.rows;
+         p.match = 1;
+         p.serp = 1;
+         a.render.apply(t, [p, 1]);
+         });
+         }).run();*/
+    };
+
+    gl.transCards = function (p, a) {
+        let t = this, ents = load.run("get", {id: p.ids, kind: "product"});
         new timeline().add(400, function () {
-            a.render.apply(t, [p, 1]);
+            ents.then(function (r) {
+                p.rows = r;
+                a.render.apply(t, [p, 1]);
+            });
         }).run();
     };
 
@@ -552,6 +711,8 @@
             b.id = i;
         }
     };
+
+    gl.money = a => a.toLocaleString('nl', {style: 'currency', currency: 'EUR'}).replace(new RegExp('00$'), '-');
 
     return gl;
 })(this);

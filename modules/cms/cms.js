@@ -1,10 +1,23 @@
 const sign = new SIMON.Cookie("sign");
 const whoami = () => sign.value.split(":").slice(1).join("");
 
+const labels = [["g", "#61BD4F"], ["y", "#F2D600"], ["o", "#FFAB4A"], ["r", "#EB5A46"], ["p", "#C377E0"], ["b", "#0079BF"]];
+
 (function (gl) {
 
     gl.base = location.origin + location.pathname;
     gl.cdnBase = (o => o && o.href)(document.querySelector('base'));
+    gl.pref = (p, v) => {
+        return typeof v == "undefined" ?
+                ~~localStorage.getItem(p) :
+                localStorage.setItem(p, ~~v);
+    };
+    gl.prefString = (p, v) => {
+        return typeof v == "undefined" ?
+                localStorage.getItem(p) :
+                localStorage.setItem(p, v);
+    };
+    gl.region = prefString("region");
 
     gl.clone = function (a) {
         //TODO MEET EFFICIENTIE
@@ -13,8 +26,6 @@ const whoami = () => sign.value.split(":").slice(1).join("");
     gl.passJson = function (s) {
         return JSON.stringify(s).replace(/"/g, '#');
     };
-
-    gl.flt = {};
 
     const
             d = document,
@@ -49,7 +60,7 @@ const whoami = () => sign.value.split(":").slice(1).join("");
                         this.cache[resource] = new SIMON.Promise((y, n) => {
                             new SIMON.Request({
                                 endpoint: ep,
-                                auth: sign.value
+                                auth: sign.value + "/" + region
                             }).send().then(function () {
                                 this.response.res ? y(this.response.res) : n();
                             }, n)
@@ -71,7 +82,7 @@ const whoami = () => sign.value.split(":").slice(1).join("");
                             if (sign.value) {
                                 new SIMON.Request({
                                     endpoint: "resourceCollect",
-                                    auth: sign.value
+                                    auth: sign.value + "/" + region
                                 }).send(h).then(function () {
                                     let res = this.response.res;
                                     for (let g in res) {
@@ -191,10 +202,26 @@ const whoami = () => sign.value.split(":").slice(1).join("");
                             })($1("input", l.closest("section")));
                         }
                     });
+                },
+                graphs: function () {
+                    load.run("sessions").then((r) => {
+                        this.parentNode.rerender(function (p) {
+                            p.sessions = r;
+                            return p;
+                        });
+                    });
                 }
             };
 
-
+    gl.transOptions = function (p, a) {
+        let t = this;
+        load.run("options", keep(p, ["id", "kind", "key","source"])).then(function (r) {
+            if (typeof r != "undefined") {
+                p.options = r;
+                a.render.apply(t, [p, 1]);
+            }
+        });
+    };
 
     gl.transEntHist = function (p, a) {
         let t = this;
@@ -243,13 +270,17 @@ const whoami = () => sign.value.split(":").slice(1).join("");
         }
     }
 
-    gl.sound = new Sound(["delete", "error", "restore", "save", "tick0", "tick1", "trash"]).preload();
+    gl.sound = new Sound(["delete", "error", "restore", "save", "tick0", "tick1", "trash", "spark"]).preload();
     let prld = () => {
         d.removeEventListener("touchstart", prld);
         gl.sound.preload();
     };
     d.addEventListener("touchstart", prld);
-
+    gl.exit = () => new SIMON.Promise((y, n) => {
+            sound.play("spark");
+            _("main").ac("o0");
+            setTimeout(y, 900);
+        });
 
     function setStats(s) {
         for (let st in s) {
@@ -278,7 +309,7 @@ const whoami = () => sign.value.split(":").slice(1).join("");
                     f = (o) => (() => (this.count() & this.success(o))),
                     req = new SIMON.Request({
                         endpoint: ep,
-                        auth: sign.value
+                        auth: sign.value + "/" + region
                     }).send(s),
                     r = new SIMON.Promise(function (y, n) {
                         req.then(f(1), f(0)).then(function () {
@@ -428,7 +459,7 @@ const whoami = () => sign.value.split(":").slice(1).join("");
             _("prompt").rerender();
         },
         save: (r, f) => {
-            clearTimeout(echTm);
+            // clearTimeout(echTm);
             if (r && r.id) {
                 f.rc("draft");
                 $(".t", f).rc("t");
@@ -514,11 +545,16 @@ const whoami = () => sign.value.split(":").slice(1).join("");
                 load.count();
                 gl.listreq.abort();
             }
-            let pm = router.params;
-            gl.listreq = load.run("list", {kind: p.kind, pm: pm, rpp: pref("rpp") || 10}).then((r) => {
+            let pm = router.params, flt = {};
+            try {
+                if (pm[3]) {
+                    flt = JSON.parse(atob(pm[3]));
+                }
+            } catch (e) {
+            }
+            gl.listreq = load.run("list", {kind: p.kind, pm: pm, rpp: pref("rpp"), order: prefString("order-" + p.kind), filter: flt}).then((r) => {
                 a.render.apply(t, [assign(p, r), 1]);
             });
-
         } else if (p.page == "edit") {
             if (p.kind == "agent" && p.id == whoami()) {
                 p.when = "me";
@@ -633,7 +669,7 @@ const whoami = () => sign.value.split(":").slice(1).join("");
                 lv,
                 l = s.length,
                 cn = 0,
-                m = _("entity");
+                m = _("entity-s");
         if (o.name === "all") {
             let a = o.checked;
             a && (cn = l);
@@ -705,41 +741,36 @@ const whoami = () => sign.value.split(":").slice(1).join("");
         setTimeout(() => populator.load('stats').then(setStats), 1e3);
 
 
-        /*
-         populator.openSocket(2e3, {
-         pins: [2, function (nw) {
-         $('.pin-update').each(function () {
-         this.rerender(function (p) {
-         p.pins = nw;
-         return p;
-         });
-         });
-         }],
-         stats: [1, setStats]
-         });
-         */
-        console.log("socket sttaat uit");
+
+        populator.openSocket(2e3, {
+            pins: [2, function (nw) {
+                    $('.pin-update').each(function () {
+                        this.rerender(function (p) {
+                            p.pins = nw;
+                            return p;
+                        });
+                    });
+                }],
+            stats: [1, setStats]
+        });
+
         new timeline().add(250, () => ld.ac("o0")).add(500, () => ld.remove()).run();
     }, () => ld.ac("offline"));
 
-    gl.pref = (p, v) => {
-        return typeof v == "undefined" ?
-                ~~localStorage.getItem(p) :
-                localStorage.setItem(p, ~~v);
-    };
+
 
 
 
 
     function addHistory(ent) {
         const k = "viewHist";
-        gl[k] = JSON.parse(localStorage.getItem(k) || "[]");
+        gl[k] = JSON.parse(prefString(k + "-" + region) || "[]");
         if (ent) {
             gl[k] = gl[k].filter(r => r.id !== ent.id);
             ent.time = new Date().getTime();
             gl[k].unshift(ent);
             gl[k] = gl[k].slice(0, 5);
-            localStorage.setItem(k, JSON.stringify(gl[k]));
+            prefString(k + "-" + region, JSON.stringify(gl[k]));
             _("history").rerender();
         }
     }
@@ -758,7 +789,7 @@ const whoami = () => sign.value.split(":").slice(1).join("");
 
 
 
-    gl.drafts = (JSON.parse(localStorage.getItem("drafts") || "{}"));
+    gl.drafts = (JSON.parse(prefString("drafts-" + region) || "{}"));
     gl.deleteDraft = (e, dr) => {
         e.preventDefault();
         delete drafts[dr];
@@ -766,7 +797,7 @@ const whoami = () => sign.value.split(":").slice(1).join("");
         saveDrafts();
     };
     function saveDrafts() {
-        localStorage.setItem("drafts", JSON.stringify(drafts));
+        prefString("drafts-" + region, JSON.stringify(drafts));
         $('.draft-update').rerender();
         if (router.route == "revision") {
             router.goto(router.hash + router.build('edit', [['kind', router.args.kind], ['id', router.args.id]]));
@@ -776,17 +807,18 @@ const whoami = () => sign.value.split(":").slice(1).join("");
         return o[o.type == "checkbox" ? "checked" : "value"]
     }
 
-    let echTm;
     gl.entityChanged = (e, k) => {
-        clearTimeout(echTm);
+        // clearTimeout(echTm);
         let t = e.target, f = t.form;
-        f.ac("draft");
-        if (f.getAttribute("draft")) {
-            echTm = setTimeout(() => {
+        if (!t.hc("no-ent")) {
+            f.ac("draft");
+            if (f.getAttribute("draft")) {
+                //     echTm = setTimeout(() => {
                 if (t.name && t.type != "password") {
                     updateDraft(f, k, t);
                 }
-            }, 500);
+                //   }, 500);
+            }
         }
     };
 
@@ -821,17 +853,26 @@ const whoami = () => sign.value.split(":").slice(1).join("");
 
     gl.updateDraft = (fr, k, t) => {
         fr.ac("draft");
+        let g = ((f, ch) => {
+            let path = f.name.split(":");
+            if (path.length - 1) {
+                if (typeof ch[path[0]] == "undefined") {
+                    ch[path[0]] = [];
+                }
+                f.checked ? ch[path[0]].push(path[1]) : ch[path[0]].splice(ch[path[0]].indexOf(path[1]), 1);
+            } else {
+                ch[path[0]] = fieldVal(f);
+            }
+        });
         if (!drafts[k] || !t) {
-
             drafts[k] = {};
             for (let f of fr.elements) {
                 if (f.name && !~["hidden", "password"].indexOf(f.type)) {
-                    drafts[k][f.name] = fieldVal(f);
+                    g(f, drafts[k]);
                 }
             }
-
         } else {
-            drafts[k][t.name] = fieldVal(t);
+            g(t, drafts[k]);
         }
         saveDrafts();
     };
@@ -908,7 +949,7 @@ const whoami = () => sign.value.split(":").slice(1).join("");
         _("fileBrOpen").checked = 1;
         _("formFiles").rerender((p) => {
             selectedFiles = [];
-            p.field = {title: tl, name: inp.name, multi: inp.multiple};
+            p.field = {title: tl, name: inp.name, multi: inp.multiple, accept: inp.getAttribute("accept")};
             p.load = 1;
             return p;
         });
@@ -942,7 +983,6 @@ const whoami = () => sign.value.split(":").slice(1).join("");
     gl.fselSlice = (lb, fid) => {
         setTimeout(() => {
             if (d.body.contains(lb)) {
-                console.log('nobo');
                 gl.selectedFiles = gl.selectedFiles.filter(a => a.id != fid);
                 _("selectedFiles").rerender();
             }
@@ -959,6 +999,9 @@ const whoami = () => sign.value.split(":").slice(1).join("");
 
     gl.transFiles = function (p, a) {
         let t = this;
+        if (p.accept) {
+            p.cdn.filter = {type: p.accept.split(",").map(s => s.trim())}
+        }
         load.run("cdn/list", p.cdn).then(r => {
             if (p.cdn.bucket == "tmp") {
                 let l = r.files.length;
@@ -999,6 +1042,35 @@ const whoami = () => sign.value.split(":").slice(1).join("");
     };
 
     gl.formatDate = (a, g) => (new Date(a).toLocaleString("en", assign({weekday: "short", year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false}, g || {})));
+
+
+    gl.listFilter = (k, rpp) => {
+        _("prompt").rerender((p) => {
+            p.msg = {tpl: "filter", params: {kind: k}};
+            p.conf = "FILTER";
+            gl.confcb = () => {
+                let flt = {};
+                for (var q of $("#filterForm select")) {
+                    if (q.value) {
+                        flt[q.name] = (flt[q.name] || []).concat([[q.value, q.nextElementSibling.value]]);
+                    }
+                }
+                let g = router.params;
+                g[0] = rpp;
+                g[1] = 0;
+                g[2] = g[2] || "";
+                router.goto(router.hash + router.build(router.route, [['kind', k]], g.slice(0, 3).concat(size(flt) ? [btoa(JSON.stringify(flt))] : [])));
+                _('prompt').rerender();
+            };
+            return p;
+        });
+    };
+
+    gl.invSess = (t, w) => {
+        load.run("sessionInvalidate", w).then(r => {
+            t.closest("section").rerender();
+        });
+    };
 
     return gl;
 })(this);
