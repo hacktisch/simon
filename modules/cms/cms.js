@@ -150,6 +150,7 @@ const labels = [["g", "#61BD4F"], ["y", "#F2D600"], ["o", "#FFAB4A"], ["r", "#EB
                 },
                 loadEntity: function () {
                     let t = this, d = JSON.parse(t.innerHTML);
+
                     load.run("get", d).then(function (r) {
                         if (typeof r != "undefined") {
                             populator.load('_env').then(function (env) {
@@ -161,6 +162,41 @@ const labels = [["g", "#61BD4F"], ["y", "#F2D600"], ["o", "#FFAB4A"], ["r", "#EB
                             });
                         }
                     });
+
+                },
+                loadPreview: function () {
+                    let t = this, d = JSON.parse(t.innerHTML), ds = d.id.split(":");
+
+                    if (ds.length - 1) {
+                        new SIMON.Video().preview(ds[0], ds[1]).then(r => {
+                            t.parentNode.rerender(function (p) {
+                                p.ent = {
+                                    type: "img",
+                                    filename: ds[0],
+                                    mime: "image/jpeg"
+                                };
+                                p.href = r.url;
+                                p.preview = r.preview;
+                                return p;
+                            });
+                        });
+                    } else {
+                        load.run("get", d).then(function (r) {
+                            if (typeof r != "undefined") {
+                                populator.load('_env').then(function (env) {
+                                    t.parentNode.rerender(function (p) {
+                                        p.ent = r;
+                                        p.href = r.baseurl + (r.dir ? r.dir + "/" : "") + r.filename;
+                                        p.preview = p.href + "/s";
+                                        return p;
+                                    });
+
+                                });
+                            }
+                        });
+                    }
+
+
                 },
                 bindShortcuts: function () {
                     $("[shortcut]", this.parentNode).each(function () {
@@ -215,7 +251,7 @@ const labels = [["g", "#61BD4F"], ["y", "#F2D600"], ["o", "#FFAB4A"], ["r", "#EB
 
     gl.transOptions = function (p, a) {
         let t = this;
-        load.run("options", keep(p, ["id", "kind", "key","source"])).then(function (r) {
+        load.run("options", keep(p, ["id", "kind", "key", "source"])).then(function (r) {
             if (typeof r != "undefined") {
                 p.options = r;
                 a.render.apply(t, [p, 1]);
@@ -235,13 +271,6 @@ const labels = [["g", "#61BD4F"], ["y", "#F2D600"], ["o", "#FFAB4A"], ["r", "#EB
             }
         });
     };
-
-    try {
-        d.createEvent("TouchEvent");
-        d.documentElement.ac("NH");
-    } catch (e) {
-        d.documentElement.ac("H");
-    }
 
 
 
@@ -484,6 +513,9 @@ const labels = [["g", "#61BD4F"], ["y", "#F2D600"], ["o", "#FFAB4A"], ["r", "#EB
                         return p;
                     }))(_("explorer"));
             }
+        },
+        settings:(r)=>{
+            console.log(r);
         }
     };
 
@@ -516,6 +548,7 @@ const labels = [["g", "#61BD4F"], ["y", "#F2D600"], ["o", "#FFAB4A"], ["r", "#EB
             return;
         }
         f.ac('lock');
+        
         load.run(a, new FormData(e.target)).then((r) => {
             f.rc('lock');
             fsret[a] && fsret[a](r, f);
@@ -699,13 +732,26 @@ const labels = [["g", "#61BD4F"], ["y", "#F2D600"], ["o", "#FFAB4A"], ["r", "#EB
 
 
     gl.showDetails = function (ent) {
-        load.run("get", ent).then((d) => {
-            ent.details = d;
-            _("details").rerender(function (p) {
-                p.ent = ent;
-                return p;
+
+        let ds = ent.id.split(":");
+
+        if (ds.length - 1) {
+            new SIMON.Video().preview(ds[0], ds[1]).then(r => {
+                _("details").rerender(function (p) {
+                    p.html = '<div class="videoc pr"><iframe class="db pa w100 h100 t0" src="' + r.embed + '"></iframe></div>';
+                    return p;
+                });
             });
-        });
+        } else {
+            load.run("get", ent).then((d) => {
+                ent.details = d;
+                _("details").rerender(function (p) {
+                    p.ent = ent;
+                    return p;
+                });
+            });
+        }
+
         _("details-toggle").checked = 1;
     };
 
@@ -835,8 +881,10 @@ const labels = [["g", "#61BD4F"], ["y", "#F2D600"], ["o", "#FFAB4A"], ["r", "#EB
                 p.sc = 1;
             }
             p.changed = 1;
+            console.log(p.value);
             return p;
         });
+
         setTimeout(triggerChange, 50, ef.elements[tg]);
     }
     function triggerChange(o) {
@@ -853,13 +901,27 @@ const labels = [["g", "#61BD4F"], ["y", "#F2D600"], ["o", "#FFAB4A"], ["r", "#EB
 
     gl.updateDraft = (fr, k, t) => {
         fr.ac("draft");
+        let once = {};
         let g = ((f, ch) => {
             let path = f.name.split(":");
             if (path.length - 1) {
-                if (typeof ch[path[0]] == "undefined") {
-                    ch[path[0]] = [];
+                if (f.type == "checkbox") {
+                    if (typeof ch[path[0]] == "undefined") {
+                        ch[path[0]] = [];
+                    }
+                    f.checked ? ch[path[0]].push(path[1]) : ch[path[0]].splice(ch[path[0]].indexOf(path[1]), 1);
+                } else if (!once[path[0]]) {
+                    once[path[0]] = 1;
+                    let fetch = [];
+                    $('.gr-' + k.split(":")[0] + "-" + path[0], f.closest(".group-list")).each(function(i) {
+                        let sub={};
+                        $("[name]",this).each(function(){
+                            sub[this.name.split(":")[1]]=this.value;
+                        });
+                        fetch[i]=sub;
+                    });
+                    ch[path[0]] = fetch;
                 }
-                f.checked ? ch[path[0]].push(path[1]) : ch[path[0]].splice(ch[path[0]].indexOf(path[1]), 1);
             } else {
                 ch[path[0]] = fieldVal(f);
             }
@@ -874,6 +936,7 @@ const labels = [["g", "#61BD4F"], ["y", "#F2D600"], ["o", "#FFAB4A"], ["r", "#EB
         } else {
             g(t, drafts[k]);
         }
+        console.log(drafts[k]);
         saveDrafts();
     };
 
@@ -1071,6 +1134,61 @@ const labels = [["g", "#61BD4F"], ["y", "#F2D600"], ["o", "#FFAB4A"], ["r", "#EB
             t.closest("section").rerender();
         });
     };
+
+    gl.parseUrl = (url) => {
+        new SIMON.Video().parse(url).then(r => {
+            _("preview").rerender(p => {
+                console.log(r || {});
+                p.found = r || {};
+                selectedFiles = r ? [{id: r.type + ":" + r.id}] : [];
+                return p
+            })
+        });
+
+    };
+    gl.insertLink = (a) => {
+        console.log(a);
+
+
+
+        setFileField("showcase");
+
+
+        /*
+         function setFileField(tg, i) {
+         let ef = _("entityForm"), ti = ef.elements[tg];
+         ti.closest("section").rerender((p) => {
+         if (typeof i != "undefined") {
+         let v = ti.value.split(",");
+         v.splice(i, 1);
+         p.value = v.join(",");
+         } else {
+         let nv = selectedFiles.map(a => a.id).join(",");
+         p.value = ti.multiple && ti.value ? ti.value + "," + nv : nv;
+         p.sc = 1;
+         }
+         p.changed = 1;
+         return p;
+         });
+         setTimeout(triggerChange, 50, ef.elements[tg]);
+         }*/
+
+
+
+
+
+
+    };
+
+
+    gl.addGroup = function (p, a) {
+        a.render.apply(this, [p, 1]);
+        let cl = this.parentNode.cloneNode(true);
+        cl.rc("dn");
+        $1(".group-list", cl.parentNode).appendChild(cl);
+        this.innerHTML="";
+    };
+
 
     return gl;
 })(this);

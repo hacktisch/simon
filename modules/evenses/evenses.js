@@ -37,8 +37,15 @@
         return JSON.stringify(s).replace(/"/g, '#');
     };
 
-    gl.flt = JSON.parse(prefString("flt") || "{}");
-    console.log("flt:", gl.flt);
+    gl.flt = gl.order = {};
+    try {
+        gl.flt = JSON.parse(prefString("flt") || "{}");
+        gl.order = JSON.parse(prefString("order") || "{}");
+    } catch (e) {
+    }
+    if (!gl.order.products) {
+        gl.order.products = []
+    }
 
     let
             d = document,
@@ -73,8 +80,6 @@
                                         r.ontology = SIMON.Mapize(r.ontology);
                                         break;
                                     case "matrix":
-                                        console.log(r.matrix);
-                                        console.log(r.locator);
                                         r.matrix = new Matrix(r.matrix);
                                         break;
                                 }
@@ -211,25 +216,20 @@
                 preview: function () {
                     let t = this, a = t.attributes, k = a.key.value, h, s;
                     switch (a.type.value) {
-                        case "yt":
-                            h = "//www.youtube.com/watch?v=" + k;
-                            s = "//img.youtube.com/vi/" + k + "/" + (a.res ? a.res.value : "mqdefault") + ".jpg";
-                            break;
-                        case "vm":
-                            h = "//vimeo.com/" + k;
-                            new SIMON.Request({
-                                base: '//vimeo.com/api/v2/video/' + k + '.json',
-                                method: 'GET'
-                            }).send().then(function () {
-                                t.css({'background-image': 'url(' + this.response[0].thumbnail_medium + ')'});
-                            });
+                        case "img":
+                            h = k;
+                            s = h + "/" + a.thumb.value;
+                            if (!a.inline) {
+                                t.href = h;
+                            }
+
                             break;
                         default:
-                            h = k;
-                            s = h + "/s";
+                            h = a.embed;
+                            s = k;
                     }
                     s && t.css({'background-image': 'url(' + s + ')'});
-                    t.href = h;
+
                 },
                 serp: function () {
                     let t = this;
@@ -241,6 +241,9 @@
                         })(t.firstElementChild);
                     }, 30);
 
+                },
+                input: function () {
+                    this.trigger("input");
                 }
             };
 
@@ -282,7 +285,7 @@
             return r;
         }
     }
-    let load = new Load();
+    gl.load = new Load();
 
 
 
@@ -309,7 +312,7 @@
             }
         }),
         build: function (r, rp, pm) {
-            let a = this.aliasRev[r + '/' + rp.map(function (a) {
+            let a = this.aliasRev[r + '/' + (rp || []).map(function (a) {
                 return a[1];
             }).join('/')];
             if (!a) {
@@ -526,8 +529,9 @@
                 for (let pm of router.params) {
                     (s => s.length == 2 && (gl.flt[s[0]] = s[1]))(pm.split("="))
                 }
-                console.log(gl.flt);
                 prefString("flt", JSON.stringify(gl.flt));
+                console.log(p.env.ontology.get("category").$.get(p.cat));
+                console.log(p.env.ontology.get("category").$);
                 let id = p.env.ontology.get("category").$.get(p.cat).id;
                 if (same) {
                     let c = $1('#fltm [value="' + id + '"]');
@@ -621,12 +625,18 @@
         populator.load('matrix').then(m => {
 
             let arr = new Array(m.width).fill(0);
-            arr[0] = 0;//flt.budget;
-            arr[m.locator[p.cat]] = 1;
+            arr[0] = ~~gl.flt.budget;
+            arr[m.locator[router.args.cat]] = 1;
             console.log(arr);
-            let filter = new Vector(arr);
-
-            p.sort = m.matrix.dist(filter).sorted;
+            let
+                    filter = new Vector(arr),
+                    dist = m.matrix.dist(filter),
+                    max = Math.max.apply(null, dist.vec),
+                    min = Math.min.apply(null, dist.vec);
+            console.log(dist.vec);
+            dist.vec = dist.vec.map(max > 0 ? v => (max - v) / (max - min) : v => 1);
+            console.log(dist.vec);
+            p.sort = dist.sorted;
             p.serp = 1;
 
             this.firstElementChild.ac('o0');
@@ -684,19 +694,31 @@
     });
 
 
-    gl.fav = function (o) {
-        let h = $1('hr', o), v = h.getAttribute('y') == '2', f = _('favs');
-        h.setAttribute('y', v ? 3 : 2);
-        f.innerHTML = parseInt(f.innerHTML) + (v ? 1 : -1)
+
+
+    gl.prvw = (o, d) => {
+        let c = $1(".cur", o.parentNode.parentNode).rc("cur"), n = (d ? c.nextElementSibling || c.parentNode.firstElementChild : c.previousElementSibling || c.parentNode.lastElementChild);
+        n.removeAttribute("sl");
+        setTimeout(() => {
+            n.setAttribute("sl", d);
+            n.rc("dn").ac("cur").ac("sl1").style.zIndex = ~~c.style.zIndex + 1;
+        }, 1);
     };
 
     gl.play = function (o) {
         let d = 'curf', a = o.attributes;
-        if (o.id != d) {
+        if (a.inline) {
+            if (a.embed) {
+                o.parentNode.rerender(p => {
+                    p.embed = a.embed.value;
+                    return p
+                })
+            }
+        } else if (o.id != d) {
             _(d) && (_(d).id = '');
             o.id = d;
-            _('player').rerender(function (p) {
-                p.key = a.key.value;
+            _('player').rerender(p => {
+                p.key = a.embed ? a.embed.value : a.key.value;
                 p.type = a.type.value;
                 return p;
             });
@@ -713,6 +735,60 @@
     };
 
     gl.money = a => a.toLocaleString('nl', {style: 'currency', currency: 'EUR'}).replace(new RegExp('00$'), '-');
+
+
+
+    gl.favTgl = (pid, set) => {
+
+
+        /*
+         let h = $1('hr', o), v = h.getAttribute('y') == '2', f = _('favs');
+         h.setAttribute('y', v ? 3 : 2);
+         f.innerHTML = parseInt(f.innerHTML) + (v ? 1 : -1)*/
+        set = set || !~order.products.indexOf(pid);
+        if (set) {
+            order.products.push(pid);
+            _('cart').rerender(function (p) {
+                p.added = pid;
+                return p;
+            });
+        } else {
+            order.products = order.products.filter(a => a != pid);
+            _('cart').rerender();
+        }
+        $(".fav-" + pid).tc("faved", set);
+        $('.favs').rerender();
+        prefString('order', JSON.stringify(order));
+    };
+
+    let loadedCss = {};
+    function requireCss(href) {
+        if (!loadedCss[href]) {
+            loadedCss[href] = 1;
+            let l = d.createElement("link");
+            l.type = "text/css";
+            l.rel = "stylesheet";
+            l.href = href;
+            d.head.appendChild(l);
+        }
+    }
+
+    gl.popTgl = function () {
+        if (this.checked) {
+
+
+            requireCss("https://fonts.googleapis.com/css?family=Patrick+Hand+SC");
+
+
+            _('orderFields').rerender();
+            $1('#order-form [text]').focus();
+            if (!order.form) {
+                order.form = 1;
+                _("request").ac("open");
+                prefString('order', JSON.stringify(order));
+            }
+        }
+    };
 
     return gl;
 })(this);

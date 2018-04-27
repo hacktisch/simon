@@ -41,6 +41,10 @@ function keep(o,keep){
             v?this.ac(c):this.rc(c);
             return this;
         },
+        sc:function(c){
+            this.hc(c)?this.rc(c):this.ac(c);
+            return this;
+        },
         hc: function (c) {
             return this.classList.contains(c);
         },

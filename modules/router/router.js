@@ -34,7 +34,7 @@ SIMON.Router = class extends SIMON.Singleton {
         let t = this;
 
         t.setByUrl();
-        window.onhashchange = function () {
+        window.onhashchange = function () {console.log("bon");
             t.setByUrl();
         };
 

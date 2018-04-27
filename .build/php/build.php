@@ -79,6 +79,17 @@ class simon {
             }
 
             $code[$asset] = file_get_contents($file);
+            $explode = array_slice(explode("/", $asset), 0, -1);
+            if ($explode[0] == "modules") {
+                $imp=implode("/", $explode) . "/inc";
+                $incdir = $this->dir . $imp;
+                if (file_exists($incdir)) {
+                    $incs = array_filter(glob($incdir . "/*"), "is_file");
+                    foreach ($incs as $inc) {
+                        $code[$asset] .= file_get_contents($inc);
+                    }
+                }
+            }
         }
 
         if ($this->config['compile']['aggregate']) {

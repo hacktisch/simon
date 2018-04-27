@@ -19,9 +19,9 @@ class Vector {
     get sorted() {
         let i = 0, r = [], l = this.vec.length;
         for (; i < l; i++) {
-            r.push([i,this.vec[i]]);
+            r.push([i, this.vec[i]]);
         }
-        r.sort((a,b)=>a[1]>b[1]);
+        r.sort((a, b) => a[1] < b[1]);
         return r
     }
 }
@@ -29,8 +29,10 @@ class Vector {
 class Matrix {
     constructor(m) {
         this.mat = [];
-        for (let i = 0, l = m.length; i < l; i++) {
-            this.mat.push(new Vector(m[i]));
+        if (m) {
+            for (let i = 0, l = m.length; i < l; i++) {
+                this.mat.push(new Vector(m[i]));
+            }
         }
     }
     dist(b, i, l, r) {
