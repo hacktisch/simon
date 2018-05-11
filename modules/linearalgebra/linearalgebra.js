@@ -26,8 +26,9 @@ class Vector {
     }
 }
 
-class Matrix {
+class Matrix extends SIMON.Singleton {
     constructor(m) {
+        super(m);
         this.mat = [];
         if (m) {
             for (let i = 0, l = m.length; i < l; i++) {

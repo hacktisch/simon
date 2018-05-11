@@ -1185,7 +1185,7 @@ const labels = [["g", "#61BD4F"], ["y", "#F2D600"], ["o", "#FFAB4A"], ["r", "#EB
         a.render.apply(this, [p, 1]);
         let cl = this.parentNode.cloneNode(true);
         cl.rc("dn");
-        $1(".group-list", cl.parentNode).appendChild(cl);
+        $1(".group-list", this.parentNode.parentNode).appendChild(cl);
         this.innerHTML="";
     };
 

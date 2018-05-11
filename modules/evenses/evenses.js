@@ -8,7 +8,17 @@
         if ("number" == objType || "string" == objType) {
             return obj;
         }
-        var result = Array.isArray(obj) ? [] : !obj.constructor ? {} : new obj.constructor();
+        var result;
+        if (Array.isArray(obj)) {
+            result = []
+        } else if(obj.constructor) {
+            if(obj instanceof SIMON.Singleton){
+                return obj;
+            }
+            result = new obj.constructor()
+        }else{
+            result ={}
+        }
         if (obj instanceof Map) {
             for (var key of obj.keys()) {
                 result.set(key, clone(obj.get(key)));
@@ -70,7 +80,7 @@
                         this.cache[resource] = new SIMON.Promise((y, n) => {
                             new SIMON.Request({
                                 endpoint: 'resource/' + resource
-                            }).send().then(function () {
+                            }).send().then(proc).then(function () {
                                 let r = this.response.res;
                                 if (!r) {
                                     n();
@@ -80,7 +90,7 @@
                                         r.ontology = SIMON.Mapize(r.ontology);
                                         break;
                                     case "matrix":
-                                        r.matrix = new Matrix(r.matrix);
+                                        r.matrix = new Matrix(r.matrix, 5767);
                                         break;
                                 }
                                 y(r);
@@ -235,12 +245,13 @@
                     let t = this;
                     setTimeout(function () {
                         (function k(c) {
-                            c.ac('jump');
-                            let n = c.nextElementSibling;
-                            n && setTimeout(k, 130, n);
+                            if (c) {
+                                c.ac('jump');
+                                let n = c.nextElementSibling;
+                                n && setTimeout(k, 130, n);
+                            }
                         })(t.firstElementChild);
                     }, 30);
-
                 },
                 input: function () {
                     this.trigger("input");
@@ -258,7 +269,15 @@
         }
     };
 
-
+    function proc() {
+        let res = this.response.res;
+        if (res && res.do) {
+            for (let m of res.do) {
+                gl[m[0]](m[1])
+            }
+            delete res.do;
+        }
+    }
     class Load {
         run(ep, s) {
             let
@@ -266,7 +285,7 @@
                         endpoint: ep
                     }).send(s),
                     r = new SIMON.Promise(function (y, n) {
-                        req.then(function () {
+                        req.then(proc).then(function () {
                             let res = this.response.res;
                             if (res && res.e) {
                                 //errorCode(res.e, res.extra);
@@ -530,8 +549,6 @@
                     (s => s.length == 2 && (gl.flt[s[0]] = s[1]))(pm.split("="))
                 }
                 prefString("flt", JSON.stringify(gl.flt));
-                console.log(p.env.ontology.get("category").$.get(p.cat));
-                console.log(p.env.ontology.get("category").$);
                 let id = p.env.ontology.get("category").$.get(p.cat).id;
                 if (same) {
                     let c = $1('#fltm [value="' + id + '"]');
@@ -601,7 +618,6 @@
         if (t.name.substring(0, 4) != "flt-") {
             let el = t.form.elements;
             gl.flt[t.name] = t.value || null;
-            console.log(gl.flt);
             prefString("flt", JSON.stringify(gl.flt));
         }
     };
@@ -624,24 +640,21 @@
 
         populator.load('matrix').then(m => {
 
+
             let arr = new Array(m.width).fill(0);
             arr[0] = ~~gl.flt.budget;
             arr[m.locator[router.args.cat]] = 1;
-            console.log(arr);
             let
                     filter = new Vector(arr),
                     dist = m.matrix.dist(filter),
                     max = Math.max.apply(null, dist.vec),
                     min = Math.min.apply(null, dist.vec);
-            console.log(dist.vec);
             dist.vec = dist.vec.map(max > 0 ? v => (max - v) / (max - min) : v => 1);
-            console.log(dist.vec);
             p.sort = dist.sorted;
             p.serp = 1;
 
             this.firstElementChild.ac('o0');
             new timeline().add(400, () => a.render.apply(this, [p, 1])).run();
-
 
         });
 
@@ -734,7 +747,7 @@
         }
     };
 
-    gl.money = a => a.toLocaleString('nl', {style: 'currency', currency: 'EUR'}).replace(new RegExp('00$'), '-');
+    gl.money = a => a ? a.toLocaleString('nl', {style: 'currency', currency: 'EUR'}).replace(new RegExp('00$'), '-') : "?";
 
 
 
@@ -789,6 +802,20 @@
             }
         }
     };
+
+    gl.log = () => {
+        console.log("")
+    };
+
+    /*
+     * -----------------
+     * DEBUG BELOW //TODO REMOVE
+     * -----------------
+     */
+
+    populator.load('matrix').then(m => {
+        gl.matrix = m;
+    });
 
     return gl;
 })(this);
