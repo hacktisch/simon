@@ -11,13 +11,13 @@
         var result;
         if (Array.isArray(obj)) {
             result = []
-        } else if(obj.constructor) {
-            if(obj instanceof SIMON.Singleton){
+        } else if (obj.constructor) {
+            if (obj instanceof SIMON.Singleton) {
                 return obj;
             }
             result = new obj.constructor()
-        }else{
-            result ={}
+        } else {
+            result = {}
         }
         if (obj instanceof Map) {
             for (var key of obj.keys()) {
@@ -108,19 +108,21 @@
                 header: function () {
                     let f = _('fly'), m = _('menu'), mt, move2 = function () {
                         clearTimeout(mt);
-                        let u = this.firstChild;
+                        let
+                                a = this.closest(".li1").firstElementChild,
+                                l = m.getBoundingClientRect().left,
+                                u = a.firstElementChild.getBoundingClientRect();
                         mt = setTimeout(function () {
                             if (f.hc('s')) {
                                 f.css({
-                                    width: u.clientWidth + "px",
-                                    left: u.offsetLeft + "px"
+                                    width: u.width + "px",
+                                    left: (u.left - l) + "px"
                                 });
-
                             } else {
                                 f.ac('b');
                                 f.css({
-                                    width: u.clientWidth + "px",
-                                    left: u.offsetLeft + "px"
+                                    width: u.width + "px",
+                                    left: (u.left - l) + "px"
                                 });
                                 new timeline().add(15, function () {
                                     f.rc('b').ac('s');
@@ -145,7 +147,7 @@
                         if (a) {
                             move2.apply(a);
                         }
-                        $('a', m).bind('mouseenter', move2);
+                        $('.l1', m).bind('mouseenter', move2);
                         m.bind('mouseleave', function () {
                             clearTimeout(mt);
                             let a = $1('.active', m);
@@ -359,35 +361,9 @@
 
 
     gl.got = {
-        fonts: new SIMON.Promise(function (y) {
-            /*
-             * Testing if font has loaded. this can only be done by checking DOM changes.
-             */
-            let
-                    f = 'Poppins',
-                    tf = 'monospace',
-                    ts = d.createElement('div'),
-                    l = d.createElement('span'),
-                    i = d.createElement('i');
-            ts.style.cssText = 'position:absolute;left:-2000px;word-wrap:break-word;font-size:30px;overflow:hidden';
-            l.style.cssText = 'font-family:' + tf + ';float:left;word-wrap:break-word;max-width:100%';
-            l.innerHTML = 'BESbswy';
-            ts.appendChild(l);
-            d.body.appendChild(ts);
-            ts.style.width = (ts.clientWidth + 1) + 'px';
-            ts.style.height = (ts.clientHeight + 1) + 'px';
-            i.style.cssText = 'width:2px;height:10px;float:left;position:relative';
-            i.innerHTML = '<input autofocus style="position:absolute">';
-            ts.appendChild(i);
-            setTimeout(function () {
-                ts.bind('scroll', function () {
-                    y();
-                    d.body.removeChild(ts);
-                });
-                l.style.fontFamily = "'" + f + "'," + tf;
-                ts.scrollTop = 1000;
-            }, 250);
-        })
+        fonts: new FontFaceObserver('Poppins', {
+            weight: 500
+        }).load(),
 
     };
 
@@ -548,8 +524,18 @@
                 for (let pm of router.params) {
                     (s => s.length == 2 && (gl.flt[s[0]] = s[1]))(pm.split("="))
                 }
+
+
+
+                console.log("yo", p);
                 prefString("flt", JSON.stringify(gl.flt));
-                let id = p.env.ontology.get("category").$.get(p.cat).id;
+
+
+
+                let id = p.cat ? p.env.ontology.get("category").$.get(p.cat).id : false;
+
+
+
                 if (same) {
                     let c = $1('#fltm [value="' + id + '"]');
                     if (c && !c.checked) {

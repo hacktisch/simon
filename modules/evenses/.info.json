@@ -1,5 +1,6 @@
 {
-    "requires":[
+    "requires": [
+        "libraries/fontfaceobserver",
         "modules/polyfills",
         "modules/shorthand",
         "modules/dom",
